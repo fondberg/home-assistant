@@ -1,13 +1,14 @@
 """Easee charger component."""
 import asyncio
+from datetime import timedelta
 import logging
 from typing import List
-from datetime import timedelta
-from easee import Easee, Site
 
+from easee import Easee, Site
 import voluptuous as vol
+
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, CONF_MONITORED_CONDITIONS
+from homeassistant.const import CONF_MONITORED_CONDITIONS, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import (
     aiohttp_client,
@@ -16,17 +17,16 @@ from homeassistant.helpers import (
 )
 from homeassistant.helpers.event import async_track_time_interval
 
+from .config_flow import EaseeConfigFlow  # noqa
 from .const import (
+    CONF_MONITORED_SITES,
     DOMAIN,
+    EASEE_ENTITIES,
     MEASURED_CONSUMPTION_DAYS,
     PLATFORMS,
-    EASEE_ENTITIES,
     SCAN_INTERVAL_SECONDS,
-    CONF_MONITORED_SITES,
 )
-from .services import async_setup_services
 from .entity import ChargerData, ChargersData
-from .config_flow import EaseeConfigFlow  # noqa
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(seconds=SCAN_INTERVAL_SECONDS)
@@ -96,10 +96,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     chargers_data = ChargersData(charger_data_list, entities)
     hass.data[DOMAIN]["chargers_data"] = chargers_data
 
+    for component in PLATFORMS:
+        hass.async_create_task(
+            hass.config_entries.async_forward_entry_setup(entry, component)
+        )
     hass.async_add_job(chargers_data.async_refresh)
     async_track_time_interval(hass, chargers_data.async_refresh, SCAN_INTERVAL)
 
-    unsub = entry.add_update_listener(config_entry_update_listener)
+    entry.add_update_listener(config_entry_update_listener)
     return True
 
 

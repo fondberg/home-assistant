@@ -3,7 +3,7 @@ DOMAIN = "easee"
 MEASURED_CONSUMPTION_DAYS = "measured_consumption_days"
 CONF_MONITORED_SITES = "monitored_sites"
 CUSTOM_UNITS = "custom_units"
-PLATFORMS = ("sensor")
+PLATFORMS = ["sensor"]
 SCAN_INTERVAL_SECONDS = 60
 MEASURED_CONSUMPTION_OPTIONS = {
     "1": "1",
@@ -77,14 +77,14 @@ EASEE_ENTITIES = {
         "convert_units_func": None,
         "icon": "mdi:wifi",
     },
-    "outputCurrent": {
+    "output_current": {
         "key": "state.outputCurrent",
         "attrs": [],
         "units": "A",
         "convert_units_func": "round_2_dec",
         "icon": "mdi:sine-wave",
     },
-    "inCurrent": {
+    "in_current": {
         "key": "state.inCurrentT2",
         "attrs": [
             "state.outputCurrent",
@@ -105,7 +105,7 @@ EASEE_ENTITIES = {
             )
         ),
     },
-    "circuitCurrent": {
+    "circuit_current": {
         "key": "state.circuitTotalPhaseConductorCurrentL1",
         "attrs": [
             "circuit.id",
@@ -136,7 +136,7 @@ EASEE_ENTITIES = {
             )
         ),
     },
-    "dynamicCircuitCurrent": {
+    "dynamic_circuit_current": {
         "key": "state.dynamicCircuitCurrentP1",
         "attrs": [
             "circuit.id",
@@ -158,7 +158,7 @@ EASEE_ENTITIES = {
             )
         ),
     },
-    "maxCircuitCurrent": {
+    "max_circuit_current": {
         "key": "config.circuitMaxCurrentP1",
         "attrs": [
             "circuit.id",
@@ -180,16 +180,16 @@ EASEE_ENTITIES = {
             )
         ),
     },
-    "dynamicChargerCurrent": {
+    "dynamic_charger_current": {
         "key": "state.dynamicChargerCurrent",
-        "attrs": ["state.dynamicChargerCurrent",],
+        "attrs": ["state.dynamicChargerCurrent"],
         "units": "A",
         "convert_units_func": "round_2_dec",
         "icon": "mdi:sine-wave",
     },
-    "maxChargerCurrent": {
+    "max_charger_current": {
         "key": "config.maxChargerCurrent",
-        "attrs": ["config.maxChargerCurrent",],
+        "attrs": ["config.maxChargerCurrent"],
         "units": "A",
         "convert_units_func": "round_2_dec",
         "icon": "mdi:sine-wave",
@@ -212,16 +212,16 @@ EASEE_ENTITIES = {
         "convert_units_func": "round_2_dec",
         "icon": "mdi:sine-wave",
     },
-    "reasonForNoCurrent": {
+    "reason_for_no_current": {
         "key": "state.reasonForNoCurrent",
-        "attrs": ["state.reasonForNoCurrent", "state.reasonForNoCurrent",],
+        "attrs": ["state.reasonForNoCurrent", "state.reasonForNoCurrent"],
         "units": "",
         "convert_units_func": None,
         "icon": "mdi:alert-circle",
     },
     "update_available": {
         "key": "state.chargerFirmware",
-        "attrs": ["state.chargerFirmware", "state.latestFirmware",],
+        "attrs": ["state.chargerFirmware", "state.latestFirmware"],
         "units": "",
         "convert_units_func": None,
         "icon": "mdi:file-download",
@@ -239,9 +239,9 @@ EASEE_ENTITIES = {
         "units": "",
         "convert_units_func": None,
         "icon": "mdi:clock-check",
-        "state_func": lambda schedule: True if schedule is not None else False,
+        "state_func": lambda schedule: schedule or False,
     },
-    "costPerKWh": {
+    "cost_per_kwh": {
         "key": "site.costPerKWh",
         "attrs": [
             "site.costPerKWh",

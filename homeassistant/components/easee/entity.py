@@ -1,12 +1,10 @@
-"""
-Easee Charger base entity class.
-Author: Niklas Fondberg<niklas.fondberg@gmail.com>
-"""
+"""Easee Charger base entity class."""
 import asyncio
-from typing import List, Dict, Callable, Any
 from datetime import datetime
+import logging
+from typing import Any, Callable, Dict, List
 
-from easee import Charger, ChargerState, ChargerConfig, Site, Circuit
+from easee import Charger, ChargerConfig, ChargerState, Circuit, Site
 from easee.charger import ChargerSchedule
 
 from homeassistant.helpers.entity import Entity
@@ -14,14 +12,12 @@ from homeassistant.util import dt
 
 from .const import DOMAIN
 
-import logging
-
 _LOGGER = logging.getLogger(__name__)
 
 
 def round_2_dec(value, unit=None):
     """Round to two decimals."""
-    if unit == "W" or unit == "Wh":
+    if unit in ("W", "Wh"):
         value = value * 1000
     return round(value, 2)
 
@@ -44,6 +40,7 @@ class ChargerData:
         self.schedule: List[ChargerSchedule] = {}
 
     async def async_refresh(self, now=None):
+        """Refresh data for charger."""
         self.state = await self.charger.get_state()
         self.config = await self.charger.get_config()
         self.schedule = await self.charger.get_basic_charge_plan()
@@ -55,17 +52,17 @@ class ChargersData:
 
     def __init__(self, chargers: List[ChargerData], entities: List[Any]):
         """Initialize the chargers data."""
-        self._chargers = chargers
-        self._entities = entities
+        self.chargers = chargers
+        self.entities = entities
 
     async def async_refresh(self, now=None):
         """Fetch new state data for the entities."""
-        tasks = [charger.async_refresh() for charger in self._chargers]
+        tasks = [charger.async_refresh() for charger in self.chargers]
         if tasks:
             await asyncio.wait(tasks)
 
         # Schedule an update for all included entities
-        for entity in self._entities:
+        for entity in self.entities:
             entity.async_schedule_update_ha_state(True)
 
 
@@ -83,7 +80,6 @@ class ChargerEntity(Entity):
         icon: str,
         state_func=None,
     ):
-
         """Initialize the entity."""
         self.charger_data = charger_data
         self._entity_name = name
@@ -155,6 +151,7 @@ class ChargerEntity(Entity):
         return False
 
     def get_value_from_key(self, key):
+        """Get the value for the sensor key."""
         first, second = key.split(".")
         value = None
         if first == "config":
@@ -172,7 +169,7 @@ class ChargerEntity(Entity):
             _LOGGER.error("Unknown first part of key: %s", key)
             raise IndexError("Unknown first part of key")
 
-        if type(value) is datetime:
+        if isinstance(value, datetime):
             value = dt.as_local(value)
         return value
 
@@ -195,5 +192,5 @@ class ChargerEntity(Entity):
             if self._convert_units_func is not None:
                 self._state = self._convert_units_func(self._state, self._units)
 
-        except IndexError:
-            raise IndexError("Wrong key for entity: %s", self._state_key)
+        except IndexError as ex:
+            raise IndexError("Wrong key for entity: %s" % self._state_key) from ex

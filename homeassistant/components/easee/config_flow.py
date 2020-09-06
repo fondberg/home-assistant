@@ -1,27 +1,24 @@
 """Config flow to configure Easee component."""
-from typing import Optional
 import logging
+from typing import List, Optional
 
+from easee import AuthorizationFailedException, Easee, Site
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.const import CONF_MONITORED_CONDITIONS, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
-from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, CONF_MONITORED_CONDITIONS
+from homeassistant.helpers import aiohttp_client, config_validation as cv
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers import (
-    aiohttp_client,
-    config_validation as cv,
-)
 
-from easee import Easee
 from .const import (
-    DOMAIN,
-    MEASURED_CONSUMPTION_DAYS,
-    MEASURED_CONSUMPTION_OPTIONS,
+    CONF_MONITORED_SITES,
     CUSTOM_UNITS,
     CUSTOM_UNITS_OPTIONS,
+    DOMAIN,
     EASEE_ENTITIES,
-    CONF_MONITORED_SITES,
+    MEASURED_CONSUMPTION_DAYS,
+    MEASURED_CONSUMPTION_OPTIONS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,7 +56,7 @@ class EaseeConfigFlow(config_entries.ConfigFlow):
                 # Check that login is possible
                 await easee.connect()
                 return self.async_create_entry(title=username, data=user_input)
-            except Exception:
+            except AuthorizationFailedException:
                 errors["base"] = "connection_failure"
 
         return self.async_show_form(

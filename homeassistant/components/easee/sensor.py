@@ -1,34 +1,31 @@
-"""
-Easee charger sensor
-Author: Niklas Fondberg<niklas.fondberg@gmail.com>
-"""
-from typing import Dict
+"""Easee charger sensor."""
 from datetime import datetime, timedelta
+import logging
+from typing import Dict
 
 from homeassistant.const import CONF_MONITORED_CONDITIONS
 from homeassistant.helpers.entity import Entity
-from .entity import ChargerEntity, convert_units_funcs, round_2_dec
+
 from .const import (
-    DOMAIN,
-    MEASURED_CONSUMPTION_DAYS,
-    EASEE_ENTITIES,
     CUSTOM_UNITS,
     CUSTOM_UNITS_TABLE,
+    DOMAIN,
+    EASEE_ENTITIES,
+    MEASURED_CONSUMPTION_DAYS,
 )
-
-import logging
+from .entity import ChargerEntity, convert_units_funcs, round_2_dec
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Setup sensor platform."""
+    """Init the sensor platform."""
     config = hass.data[DOMAIN]["config"]
     chargers_data = hass.data[DOMAIN]["chargers_data"]
     monitored_conditions = config.options.get(CONF_MONITORED_CONDITIONS, ["status"])
     custom_units = config.options.get(CUSTOM_UNITS, {})
     entities = []
-    for charger_data in chargers_data._chargers:
+    for charger_data in chargers_data.chargers:
         for key in monitored_conditions:
             data = EASEE_ENTITIES[key]
             entity_type = data.get("type", "sensor")
@@ -72,7 +69,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 )
             )
 
-    chargers_data._entities.extend(entities)
+    chargers_data.entities.extend(entities)
     async_add_entities(entities)
 
 
