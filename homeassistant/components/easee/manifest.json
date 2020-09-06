@@ -1,15 +1,15 @@
 {
   "domain": "easee",
-  "name": "Easee EV Charger",
-  "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/easee",
+  "name": "Easee charger component",
+  "documentation": "https://github.com/fondberg/easee_hass",
   "requirements": [
     "easee==0.7.16"
   ],
-  "ssdp": [],
-  "zeroconf": [],
-  "homekit": {},
-  "dependencies": [],
+  "homeassistant": "0.113.0",
+  "config_flow": true,
+  "dependencies": [
+    "configurator"
+  ],
   "codeowners": [
     "@fondberg"
   ]

@@ -1,91 +1,134 @@
-"""Config flow for Easee EV Charger integration."""
+"""Config flow to configure Easee component."""
+from typing import Optional
 import logging
 
 import voluptuous as vol
 
-from homeassistant import config_entries, core, exceptions
+from homeassistant import config_entries
+from homeassistant.core import callback
+from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, CONF_MONITORED_CONDITIONS
+from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers import (
+    aiohttp_client,
+    config_validation as cv,
+)
 
-from .const import DOMAIN  # pylint:disable=unused-import
+from easee import Easee
+from .const import (
+    DOMAIN,
+    MEASURED_CONSUMPTION_DAYS,
+    MEASURED_CONSUMPTION_OPTIONS,
+    CUSTOM_UNITS,
+    CUSTOM_UNITS_OPTIONS,
+    EASEE_ENTITIES,
+    CONF_MONITORED_SITES,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-# TODO adjust the data schema to the data that you need
-DATA_SCHEMA = vol.Schema({"host": str, "username": str, "password": str})
 
-
-class PlaceholderHub:
-    """Placeholder class to make tests pass.
-
-    TODO Remove this placeholder class and replace with things from your PyPI package.
-    """
-
-    def __init__(self, host):
-        """Initialize."""
-        self.host = host
-
-    async def authenticate(self, username, password) -> bool:
-        """Test if we can authenticate with the host."""
-        return True
-
-
-async def validate_input(hass: core.HomeAssistant, data):
-    """Validate the user input allows us to connect.
-
-    Data has the keys from DATA_SCHEMA with values provided by the user.
-    """
-    # TODO validate the data can be used to set up a connection.
-
-    # If your PyPI package is not built with async, pass your methods
-    # to the executor:
-    # await hass.async_add_executor_job(
-    #     your_validate_func, data["username"], data["password"]
-    # )
-
-    hub = PlaceholderHub(data["host"])
-
-    if not await hub.authenticate(data["username"], data["password"]):
-        raise InvalidAuth
-
-    # If you cannot connect:
-    # throw CannotConnect
-    # If the authentication is wrong:
-    # InvalidAuth
-
-    # Return info that you want to store in the config entry.
-    return {"title": "Name of the device"}
-
-
-class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Easee EV Charger."""
+@config_entries.HANDLERS.register(DOMAIN)
+class EaseeConfigFlow(config_entries.ConfigFlow):
+    """Easee config flow."""
 
     VERSION = 1
-    # TODO pick one of the available connection classes in homeassistant/config_entries.py
-    CONNECTION_CLASS = config_entries.CONN_CLASS_UNKNOWN
+    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
-    async def async_step_user(self, user_input=None):
-        """Handle the initial step."""
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return OptionsFlowHandler(config_entry)
+
+    async def async_step_user(self, user_input: Optional[ConfigType] = None):
+        """Handle a flow start."""
+        # Supporting a single account.
+        entries = self.hass.config_entries.async_entries(DOMAIN)
+        if entries:
+            return self.async_abort(reason="already_setup")
+
         errors = {}
-        if user_input is not None:
-            try:
-                info = await validate_input(self.hass, user_input)
 
-                return self.async_create_entry(title=info["title"], data=user_input)
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
-            except InvalidAuth:
-                errors["base"] = "invalid_auth"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
-                errors["base"] = "unknown"
+        if user_input is not None:
+            username = user_input[CONF_USERNAME]
+            password = user_input[CONF_PASSWORD]
+
+            try:
+                client_session = aiohttp_client.async_get_clientsession(self.hass)
+                easee = Easee(username, password, client_session)
+                # Check that login is possible
+                await easee.connect()
+                return self.async_create_entry(title=username, data=user_input)
+            except Exception:
+                errors["base"] = "connection_failure"
 
         return self.async_show_form(
-            step_id="user", data_schema=DATA_SCHEMA, errors=errors
+            step_id="user",
+            data_schema=vol.Schema(
+                {vol.Required(CONF_USERNAME): str, vol.Required(CONF_PASSWORD): str}
+            ),
+            errors=errors,
         )
 
+    async def async_step_import(self, user_input: Optional[ConfigType] = None):
+        """Occurs when an entry is setup through config."""
+        return await self.async_step_user(user_input)
 
-class CannotConnect(exceptions.HomeAssistantError):
-    """Error to indicate we cannot connect."""
 
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle options."""
 
-class InvalidAuth(exceptions.HomeAssistantError):
-    """Error to indicate there is invalid auth."""
+    def __init__(self, config_entry):
+        """Initialize options flow."""
+        self.config_entry = config_entry
+        self.options = dict(config_entry.options)
+
+    async def async_step_init(self, user_input=None):
+        """Manage the options."""
+        return await self.async_step_options_1()
+
+    async def async_step_options_1(self, user_input=None):
+        """Manage the options."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return await self._update_options()
+
+        sensor_multi_select = {x: x for x in list(EASEE_ENTITIES)}
+        sites: List[Site] = self.hass.data[DOMAIN]["sites"]
+        sites_multi_select = []
+        for site in sites:
+            sites_multi_select.append(site["name"])
+
+        return self.async_show_form(
+            step_id="options_1",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_MONITORED_SITES,
+                        default=self.config_entry.options.get(
+                            CONF_MONITORED_SITES, sites_multi_select
+                        ),
+                    ): cv.multi_select(sites_multi_select),
+                    vol.Optional(
+                        CONF_MONITORED_CONDITIONS,
+                        default=self.config_entry.options.get(
+                            CONF_MONITORED_CONDITIONS, ["status"]
+                        ),
+                    ): cv.multi_select(sensor_multi_select),
+                    vol.Optional(
+                        MEASURED_CONSUMPTION_DAYS,
+                        default=self.config_entry.options.get(
+                            MEASURED_CONSUMPTION_DAYS, ["1"]
+                        ),
+                    ): cv.multi_select(MEASURED_CONSUMPTION_OPTIONS),
+                    vol.Optional(
+                        CUSTOM_UNITS,
+                        default=self.config_entry.options.get(CUSTOM_UNITS, None),
+                    ): cv.multi_select(CUSTOM_UNITS_OPTIONS),
+                }
+            ),
+        )
+
+    async def _update_options(self):
+        """Update config entry options."""
+        return self.async_create_entry(title="", data=self.options)
