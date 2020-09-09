@@ -120,7 +120,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): cv.multi_select(MEASURED_CONSUMPTION_OPTIONS),
                     vol.Optional(
                         CUSTOM_UNITS,
-                        default=self.config_entry.options.get(CUSTOM_UNITS, None),
+                        default=self.config_entry.options.get(CUSTOM_UNITS, []),
                     ): cv.multi_select(CUSTOM_UNITS_OPTIONS),
                 }
             ),
