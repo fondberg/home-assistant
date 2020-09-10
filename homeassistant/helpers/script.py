@@ -1,6 +1,5 @@
 """Helpers to execute scripts."""
 import asyncio
-from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import partial
 import itertools
@@ -572,7 +571,7 @@ class _ScriptRun:
             "" if delay is None else f" (timeout: {timedelta(seconds=delay)})",
         )
 
-        variables = deepcopy(self._variables)
+        variables = {**self._variables}
         self._variables["wait"] = {"remaining": delay, "trigger": None}
 
         async def async_done(variables, context=None):
@@ -935,7 +934,10 @@ class Script:
         await asyncio.shield(self._async_stop(update_state))
 
     async def _async_get_condition(self, config):
-        config_cache_key = frozenset((k, str(v)) for k, v in config.items())
+        if isinstance(config, template.Template):
+            config_cache_key = config.template
+        else:
+            config_cache_key = frozenset((k, str(v)) for k, v in config.items())
         cond = self._config_cache.get(config_cache_key)
         if not cond:
             cond = await condition.async_from_config(self._hass, config, False)

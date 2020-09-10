@@ -5,8 +5,10 @@ from arcam.fmj import DecodeMode2CH, DecodeModeMCH, IncomingAudioFormat, SourceC
 from arcam.fmj.state import State
 
 from homeassistant import config_entries
-from homeassistant.components.media_player import MediaPlayerEntity
+from homeassistant.components.media_player import BrowseMedia, MediaPlayerEntity
 from homeassistant.components.media_player.const import (
+    MEDIA_CLASS_DIRECTORY,
+    MEDIA_CLASS_MUSIC,
     MEDIA_TYPE_MUSIC,
     SUPPORT_BROWSE_MEDIA,
     SUPPORT_PLAY_MEDIA,
@@ -253,22 +255,26 @@ class ArcamFmj(MediaPlayerEntity):
         presets = self._state.get_preset_details()
 
         radio = [
-            {
-                "title": preset.name,
-                "media_content_id": f"preset:{preset.index}",
-                "media_content_type": MEDIA_TYPE_MUSIC,
-                "can_play": True,
-            }
+            BrowseMedia(
+                title=preset.name,
+                media_class=MEDIA_CLASS_MUSIC,
+                media_content_id=f"preset:{preset.index}",
+                media_content_type=MEDIA_TYPE_MUSIC,
+                can_play=True,
+                can_expand=False,
+            )
             for preset in presets.values()
         ]
 
-        root = {
-            "title": "Root",
-            "media_content_id": "root",
-            "media_content_type": "library",
-            "can_play": False,
-            "children": radio,
-        }
+        root = BrowseMedia(
+            title="Root",
+            media_class=MEDIA_CLASS_DIRECTORY,
+            media_content_id="root",
+            media_content_type="library",
+            can_play=False,
+            can_expand=True,
+            children=radio,
+        )
 
         return root
 
