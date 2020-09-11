@@ -22,6 +22,7 @@ from .const import (
     CONF_MONITORED_SITES,
     DOMAIN,
     EASEE_ENTITIES,
+    LISTENER_FN_CLOSE,
     MEASURED_CONSUMPTION_DAYS,
     PLATFORMS,
     SCAN_INTERVAL_SECONDS,
@@ -103,7 +104,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     hass.async_add_job(chargers_data.async_refresh)
     async_track_time_interval(hass, chargers_data.async_refresh, SCAN_INTERVAL)
 
-    entry.add_update_listener(config_entry_update_listener)
+    undo_listener = entry.add_update_listener(config_entry_update_listener)
+
+    hass.data[DOMAIN][entry.entry_id] = {
+        LISTENER_FN_CLOSE: undo_listener,
+    }
     return True
 
 
@@ -118,12 +123,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         )
     )
     if unload_ok:
+        hass.data[DOMAIN][entry.entry_id][LISTENER_FN_CLOSE]()
         hass.data[DOMAIN] = {}
 
     return unload_ok
 
 
-async def config_entry_update_listener(hass, entry):
+async def config_entry_update_listener(hass: HomeAssistant, entry: ConfigEntry):
     """Handle options update, delete device and set it up again as suggested on discord #devs_core."""
     await hass.config_entries.async_reload(entry.entry_id)
 
