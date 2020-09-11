@@ -114,13 +114,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): cv.multi_select(sensor_multi_select),
                     vol.Optional(
                         MEASURED_CONSUMPTION_DAYS,
-                        default=self.config_entry.options.get(
-                            MEASURED_CONSUMPTION_DAYS, ["1"]
-                        ),
                     ): cv.multi_select(MEASURED_CONSUMPTION_OPTIONS),
                     vol.Optional(
                         CUSTOM_UNITS,
-                        default=self.config_entry.options.get(CUSTOM_UNITS, []),
                     ): cv.multi_select(CUSTOM_UNITS_OPTIONS),
                 }
             ),
