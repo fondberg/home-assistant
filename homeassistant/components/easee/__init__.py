@@ -65,7 +65,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     client_session = aiohttp_client.async_get_clientsession(hass)
     easee = Easee(username, password, client_session)
     sites: List[Site] = await easee.get_sites()
-    # TODO: catch 503 errors here
 
     hass.data[DOMAIN]["session"] = easee
     hass.data[DOMAIN]["config"] = entry
